@@ -115,6 +115,62 @@
     }
   });
 
+  // ---------- 7) 表示できない写真をギャラリーから取り除いて詰める ----------
+  // 旧サイトでは Wix 側にファイルが残っておらず「読み込めない画像」のまま並んでいた写真がある。
+  // アーカイブでは見た目を整えるため、その枠を取り除いて後ろの写真を前に詰める（クライアント指示・2026-09-16）。
+  // 本文中の画像（ギャラリー以外）は対象外。
+  (function () {
+    // 同じギャラリーを二重に処理しないよう、横スクロールの枠（無ければ入れ子でない pro-gallery）を単位にする
+    var boxes = [].slice.call(document.querySelectorAll('.gallery-horizontal-scroll'));
+    [].forEach.call(document.querySelectorAll('.pro-gallery'), function (g) {
+      if (g.querySelector('.gallery-horizontal-scroll')) return;
+      if (boxes.some(function (b) { return b.contains(g) || g.contains(b); })) return;
+      boxes.push(g);
+    });
+    boxes.forEach(function (box) {
+      var dead = [].filter.call(box.querySelectorAll('img'), function (i) {
+        return (i.getAttribute('src') || '').indexOf('_not_available') >= 0 || (i.getAttribute('srcset') || '').indexOf('_not_available') >= 0;
+      });
+      if (!dead.length) return;
+      dead.forEach(function (img) {
+        var cont = img.closest('[data-hook="item-container"]');
+        if (!cont) return;
+        // 写真1枚ぶんの入れ物（グループ枠 → リンク枠 → 本体）の一番外側を消す
+        var node = cont;
+        while (node.parentNode && node.parentNode !== box && node.parentNode.children.length === 1) node = node.parentNode;
+        if (node.parentNode) node.parentNode.removeChild(node);
+      });
+      var items = [].slice.call(box.querySelectorAll('[data-hook="item-container"]'));
+      if (!items.length) return;
+      var info = items.map(function (e) {
+        var grp = e.closest('[style*="--group-left"]');
+        return { el: e, grp: grp, left: parseFloat(e.style.left) || 0, top: parseFloat(e.style.top) || 0, w: parseFloat(e.style.width) || e.offsetWidth };
+      });
+      // 1行に並ぶギャラリーだけ詰める（格子状のものは触らない）
+      var tops = info.map(function (v) { return Math.round(v.top); });
+      if (tops.some(function (t) { return t !== tops[0]; })) return;
+      info.sort(function (a, b) { return a.left - b.left; });
+      var gap = 20;
+      for (var i = 1; i < info.length; i++) {
+        var d = Math.round(info[i].left - (info[i - 1].left + info[i - 1].w));
+        if (d > 0 && d < 200) { gap = d; break; }
+      }
+      var start = info[0].left, x = start;
+      info.forEach(function (v) {
+        v.el.style.left = x + 'px';
+        if (v.el.style.inset) v.el.style.inset = v.top + 'px auto auto ' + x + 'px';
+        if (v.grp) v.grp.style.setProperty('--group-left', x + 'px');
+        x += v.w + gap;
+      });
+      var total = x - gap - start + (parseFloat(getComputedStyle(info[0].el).marginLeft) || 0) * 2;
+      // 横スクロールの長さを決めている枠の幅も詰める
+      [].forEach.call(box.querySelectorAll('[style*="width"]'), function (e) {
+        var wv = parseFloat(e.style.width);
+        if (wv && wv > total && e.querySelector('[data-hook="item-container"]')) e.style.width = total + 'px';
+      });
+    });
+  })();
+
   // ---------- 2) 横スクロール型ギャラリーの矢印 ----------
   [].forEach.call(document.querySelectorAll('.gallery-horizontal-scroll'), function (sc) {
     var root = sc.closest('.pro-gallery') || sc.parentNode;
