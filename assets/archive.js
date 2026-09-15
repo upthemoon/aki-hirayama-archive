@@ -178,7 +178,7 @@
     function close() {
       clearTimeout(timer);
       if (openIdx === null) return;
-      var li = topItem(openIdx);
+      var li = openIdx === 'more' ? null : topItem(openIdx);
       if (li) { var a = li.querySelector('a[aria-haspopup]'); if (a) a.setAttribute('aria-expanded', 'false'); var b = li.querySelector('button'); if (b) b.classList.remove('Ln3X5V'); }
       ul.innerHTML = ''; ul.removeAttribute('data-hover'); ul.removeAttribute('style');
       wrap.classList.remove('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'false'); wrap.removeAttribute('data-drophposition'); wrap.removeAttribute('style');
@@ -200,6 +200,79 @@
       if (!DROP[li.getAttribute('data-index')] && !touchUA) li.addEventListener('mouseenter', close);
     });
     if (!touchUA) { wrap.addEventListener('mouseenter', function () { clearTimeout(timer); }); wrap.addEventListener('mouseleave', later); }
+
+    // 画面が狭くてメニューが一列に収まらない時、本物と同じく後ろの項目を「その他」へたたむ
+    // （iPad のデスクトップ表示モードなど、表示幅が980pxより狭くなる端末で起きる）
+    var more = menu.querySelector('li[data-index]:not([data-dropdown]) [id$="__more__label"]');
+    var moreLi = more ? more.closest('li') : menu.querySelector('#comp-kep43s1b__more__') || menu.querySelector('li:last-child');
+    var nav = document.getElementById('comp-kep43s1bnavContainer');
+    var tops = [].slice.call(menu.querySelectorAll('li[data-index]:not([data-dropdown])'));
+    var natural = null;
+    function fit() {
+      if (!moreLi || !nav) return;
+      if (openIdx !== null) close();
+      // 各項目の「本来の幅」を一度だけ測る
+      if (!natural) {
+        // 幅が足りない時、項目の枠は縮んで文字だけがはみ出す。だから「文字が必要とする幅」で測る
+        natural = tops.map(function (li) {
+          var p = li.querySelector('p') || li;
+          var pad = li.getBoundingClientRect().width - p.getBoundingClientRect().width;
+          return Math.ceil(Math.max(p.scrollWidth, p.getBoundingClientRect().width) + Math.max(0, pad));
+        });
+        natural.moreW = Math.ceil(moreLi.getBoundingClientRect().width) || 62;
+        if (natural.moreW < 40) natural.moreW = 62;
+      }
+      var avail = nav.getBoundingClientRect().width;
+      var hidden = [];
+      var total = natural.reduce(function (a, b) { return a + b; }, 0);
+      var i = tops.length - 1;
+      while (total > avail && i > 0) {
+        // 「その他」の分の幅も要る
+        if (!hidden.length) total += natural.moreW;
+        hidden.unshift(tops[i]); total -= natural[i]; i--;
+      }
+      tops.forEach(function (li) { li.style.display = hidden.indexOf(li) >= 0 ? 'none' : ''; });
+      if (hidden.length) {
+        // 本物は「その他」を高さ0・位置絶対で隠している。出す時はその指定を外す
+        moreLi.style.visibility = 'visible'; moreLi.setAttribute('aria-hidden', 'false');
+        moreLi.style.display = ''; moreLi.style.height = ''; moreLi.style.overflow = 'visible'; moreLi.style.position = 'relative';
+        MORE_ITEMS = hidden.map(function (li) { var a = li.querySelector('a'); return { href: a ? a.getAttribute('href') : '#', text: (li.textContent || '').trim(), idx: li.getAttribute('data-index') }; });
+      } else {
+        moreLi.style.visibility = 'hidden'; moreLi.setAttribute('aria-hidden', 'true');
+        moreLi.style.display = ''; moreLi.style.height = '0px'; moreLi.style.overflow = 'hidden'; moreLi.style.position = 'absolute';
+        MORE_ITEMS = null;
+      }
+    }
+    var MORE_ITEMS = null;
+    // 「その他」を開いた時の中身を、下層メニューと同じ作りで組み立てる
+    function moreHtml() {
+      if (!MORE_ITEMS) return '';
+      var w = Math.max.apply(null, MORE_ITEMS.map(function (m) { return m.text.length * 14 + 40; }).concat([180]));
+      return MORE_ITEMS.map(function (m, n) {
+        var pos = MORE_ITEMS.length === 1 ? 'top' : (n === 0 ? 'top' : (n === MORE_ITEMS.length - 1 ? 'bottom' : 'dropCenter'));
+        return '<li id="comp-kep43s1bmoreContainer' + n + '" data-direction="ltr" data-listposition="' + pos + '" data-state="drop false  link" data-index="' + n + '" data-dropdown="true" class="NV2Ozs CUYeWp" style="min-width: ' + w + 'px;">' +
+          '<a data-testid="linkElement" href="' + m.href + '" target="_self" class="qMvpu5"><div class="EWeavx"><div class="">' +
+          '<p class="wGxoBM" id="comp-kep43s1bmoreContainer' + n + 'label" style="min-width: 0px; line-height: 29px;">' + m.text + '</p></div></div></a></li>';
+      }).join('');
+    }
+    if (moreLi) {
+      var openMore = function () {
+        if (!MORE_ITEMS) return;
+        close();
+        var r = moreLi.getBoundingClientRect(), nr = nav.getBoundingClientRect();
+        var left = Math.round(r.left - nr.left) + 'px';
+        ul.innerHTML = moreHtml(); ul.setAttribute('data-hover', 'more'); ul.style.left = left; ul.style.right = 'auto';
+        wrap.classList.add('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'true'); wrap.setAttribute('data-drophposition', 'center');
+        wrap.style.inset = '30px auto auto ' + left;
+        openIdx = 'more';
+      };
+      if (!touchUA) { moreLi.addEventListener('mouseenter', openMore); moreLi.addEventListener('mouseleave', later); }
+      moreLi.addEventListener('click', function (e) { e.preventDefault(); if (openIdx === 'more') close(); else openMore(); });
+    }
+    fit();
+    window.addEventListener('resize', function () { natural = null; fit(); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { natural = null; fit(); });
+
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
   })();
 })();
