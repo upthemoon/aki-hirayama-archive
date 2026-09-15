@@ -86,7 +86,7 @@
     var box = wrap.querySelector('[data-hook="thumbnail-cover"]') || wrap;
     var r = box.getBoundingClientRect();
     var f = document.createElement('iframe');
-    f.src = 'https://www.youtube.com/embed/' + wrap.getAttribute('data-yt') + '?autoplay=1&rel=0';
+    f.src = 'https://www.youtube-nocookie.com/embed/' + wrap.getAttribute('data-yt') + '?autoplay=1&rel=0';
     f.title = (wrap.querySelector('[data-hook="title"]') || {}).textContent || 'YouTube';
     f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     f.setAttribute('allowfullscreen', '');
@@ -142,4 +142,64 @@
     sc.addEventListener('scroll', update, { passive: true });
     update();
   });
+
+  // ---------- 6) メニューの下層（ドロップダウン） ----------
+  // 本物の Wix はマウスを乗せた時に下層を JS で組み立てる。組み立て後の構造と位置を本物から写し取ったもの。
+  // スマホ・タブレット（Wix が端末判定で縮小表示にする端末）では、1回目のタップで下層を開き、2回目で移動する（本物と同じ）。
+  (function () {
+    var DROP = {"2": {"left": "-8px", "html": "<li id=\"comp-kep43s1bmoreContainer0\" data-direction=\"ltr\" data-listposition=\"top\" data-data-id=\"dataItem-ki1aqmmx\" data-state=\"drop false  link\" data-index=\"0\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 420px;\"><a data-testid=\"linkElement\" href=\"/社会活動への学生参加1\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer0label\" style=\"min-width: 0px; line-height: 29px;\">社会活動への学生参加(1)―― AHI (アジア保健研修所) と学ぶ会</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer1\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-lual964y\" data-state=\"drop false  link\" data-index=\"1\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 420px;\"><a data-testid=\"linkElement\" href=\"/社会活動への学生参加-2多文化共生プロジェクト\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer1label\" style=\"min-width: 0px; line-height: 29px;\">社会活動への学生参加(2)――多文化共生プロジェクト</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer2\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-l0bynr89\" data-state=\"drop false  link\" data-index=\"2\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 420px;\"><a data-testid=\"linkElement\" href=\"/社会活動への学生参加3\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer2label\" style=\"min-width: 0px; line-height: 29px;\">社会活動への学生参加(3)――徳林寺、福慧寺</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer3\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-kvdeh32w\" data-state=\"drop false  link\" data-index=\"3\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 420px;\"><a data-testid=\"linkElement\" href=\"/社会活動への学生参加4\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer3label\" style=\"min-width: 0px; line-height: 29px;\">社会活動への学生参加(4)――四日市とのかかわり</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer4\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-kvdehdzh\" data-state=\"drop false  link\" data-index=\"4\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 420px;\"><a data-testid=\"linkElement\" href=\"/社会活動への学生参加5\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer4label\" style=\"min-width: 0px; line-height: 29px;\">社会活動への学生参加(5)――その他</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer5\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-ki1an4qr\" data-state=\"drop false  link\" data-index=\"5\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 420px;\"><a data-testid=\"linkElement\" href=\"/out-of-class-lesson-copy\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer5label\" style=\"min-width: 0px; line-height: 29px;\">Out-of-Class Lesson</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer6\" data-direction=\"ltr\" data-listposition=\"bottom\" data-data-id=\"dataItem-kepaevpj\" data-state=\"drop false  link\" data-index=\"6\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 420px;\"><a data-testid=\"linkElement\" href=\"/out-of-class-lesson-2\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer6label\" style=\"min-width: 0px; line-height: 29px;\">Out-of-Class Lesson 2</p></div></div></a></li>"}, "3": {"left": "152.5px", "html": "<li id=\"comp-kep43s1bmoreContainer0\" data-direction=\"ltr\" data-listposition=\"top\" data-data-id=\"dataItem-lg0sdff0\" data-state=\"drop false  link\" data-index=\"0\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/平山ゼミ卒業論文\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer0label\" style=\"min-width: 0px; line-height: 29px;\">平山ゼミ卒業論文</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer1\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-lualrf0z\" data-state=\"drop false  link\" data-index=\"1\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2023年度creative-presentation\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer1label\" style=\"min-width: 0px; line-height: 29px;\">「2023年度Creative Presentation」</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer2\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-lc79v7bj\" data-state=\"drop false  link\" data-index=\"2\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2022年度creativepresentation\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer2label\" style=\"min-width: 0px; line-height: 29px;\">「2022年度Creative Presentation」</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer3\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-l0bzloz2\" data-state=\"drop false  link\" data-index=\"3\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2021年度英語研修sdgsworkshop\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer3label\" style=\"min-width: 0px; line-height: 29px;\">「2021年度英語研修 SDGs Workshop」</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer4\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-kepclg3l\" data-state=\"drop false  link\" data-index=\"4\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2019年度-海外研修-iii-a-中止後の特別授業\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer4label\" style=\"min-width: 0px; line-height: 29px;\">「2019年度 海外研修 III A 」\n中止後の特別授業</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer5\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-kepcm63k\" data-state=\"drop false  link\" data-index=\"5\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2018年度-海外研修-iii-a-訪問先\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer5label\" style=\"min-width: 0px; line-height: 29px;\">「2018年度 海外研修 III A 」訪問先</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer6\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-kepcms9b\" data-state=\"drop false  link\" data-index=\"6\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2018年度-海外研修-iii-a-事前学習\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer6label\" style=\"min-width: 0px; line-height: 29px;\">「2018年度 海外研修 III A 」事前学習</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer7\" data-direction=\"ltr\" data-listposition=\"dropCenter\" data-data-id=\"dataItem-kepcnaeg\" data-state=\"drop false  link\" data-index=\"7\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2017年度-地域研究-国際研修プログラム-フィリピン-訪問先\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer7label\" style=\"min-width: 0px; line-height: 29px;\">「2017年度 地域研究・国際研修プログラム(フィリピン)」訪問先</p></div></div></a></li><li id=\"comp-kep43s1bmoreContainer8\" data-direction=\"ltr\" data-listposition=\"bottom\" data-data-id=\"dataItem-kepcntnu\" data-state=\"drop false  link\" data-index=\"8\" data-dropdown=\"true\" class=\"NV2Ozs CUYeWp\" style=\"min-width: 447px;\"><a data-testid=\"linkElement\" href=\"/2017年度-地域研究-国際研修プログラム-フィリピン-事前学習\" target=\"_self\" class=\"qMvpu5\"><div class=\"EWeavx\"><div class=\"\"><p class=\"wGxoBM\" id=\"comp-kep43s1bmoreContainer8label\" style=\"min-width: 0px; line-height: 29px;\">「2017年度 地域研究・国際研修プログラム(フィリピン)」事前学習</p></div></div></a></li>"}};
+    var menu = document.getElementById('comp-kep43s1b');
+    var wrap = document.getElementById('comp-kep43s1bdropWrapper');
+    var ul = document.getElementById('comp-kep43s1bmoreContainer');
+    if (!menu || !wrap || !ul) return;
+    var touchUA = /iPhone|iPod|iPad|Android|Silk|Kindle|Mobile/i.test(navigator.userAgent);
+    var openIdx = null, timer = null;
+    function topItem(i) { return menu.querySelector('li[data-index="' + i + '"]:not([data-dropdown])'); }
+    function open(i) {
+      clearTimeout(timer);
+      if (openIdx === i) return;
+      close();
+      var d = DROP[i], li = topItem(i); if (!d || !li) return;
+      ul.innerHTML = d.html; ul.setAttribute('data-hover', i);
+      // 今いるページの項目は本物と同じく「選択中」の状態にする
+      [].forEach.call(ul.querySelectorAll('li'), function (x) {
+        var h = x.querySelector('a'); if (!h) return;
+        var here = decodeURIComponent(location.pathname).replace(/\.html$/, '').replace(/\/$/, '');
+        var to = decodeURIComponent(h.getAttribute('href')).replace(/\.html$/, '').replace(/\/$/, '');
+        if (here.slice(-to.length) === to) x.setAttribute('data-state', 'drop selected  link');
+      }); ul.style.left = d.left; ul.style.right = 'auto';
+      wrap.classList.add('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'true'); wrap.setAttribute('data-drophposition', 'center');
+      wrap.style.inset = '30px auto auto ' + d.left;
+      menu.setAttribute('data-hovered-item', i);
+      var a = li.querySelector('a[aria-haspopup]'); if (a) a.setAttribute('aria-expanded', 'true');
+      var b = li.querySelector('button'); if (b) b.classList.add('Ln3X5V');
+      openIdx = i;
+    }
+    function close() {
+      clearTimeout(timer);
+      if (openIdx === null) return;
+      var li = topItem(openIdx);
+      if (li) { var a = li.querySelector('a[aria-haspopup]'); if (a) a.setAttribute('aria-expanded', 'false'); var b = li.querySelector('button'); if (b) b.classList.remove('Ln3X5V'); }
+      ul.innerHTML = ''; ul.removeAttribute('data-hover'); ul.removeAttribute('style');
+      wrap.classList.remove('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'false'); wrap.removeAttribute('data-drophposition'); wrap.removeAttribute('style');
+      menu.removeAttribute('data-hovered-item');
+      openIdx = null;
+    }
+    function later() { clearTimeout(timer); timer = setTimeout(close, 150); }
+    Object.keys(DROP).forEach(function (i) {
+      var li = topItem(i); if (!li) return;
+      // スマホ・タブレットではタップの直前に疑似的な「マウスが乗った」合図が来るため、乗せて開く動きはPCだけにする
+      if (!touchUA) { li.addEventListener('mouseenter', function () { open(i); }); li.addEventListener('mouseleave', later); }
+      var a = li.querySelector('a[aria-haspopup]');
+      if (a && touchUA) a.addEventListener('click', function (e) { if (openIdx !== i) { e.preventDefault(); open(i); } });
+      var b = li.querySelector('button');
+      if (b) b.addEventListener('click', function (e) { e.preventDefault(); if (openIdx === i) close(); else open(i); });
+    });
+    // 他のメニュー項目に移ったら閉じる
+    [].forEach.call(menu.querySelectorAll('li[data-index]:not([data-dropdown])'), function (li) {
+      if (!DROP[li.getAttribute('data-index')] && !touchUA) li.addEventListener('mouseenter', close);
+    });
+    if (!touchUA) { wrap.addEventListener('mouseenter', function () { clearTimeout(timer); }); wrap.addEventListener('mouseleave', later); }
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  })();
 })();
