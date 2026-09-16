@@ -6,9 +6,11 @@
 
   // ---------- 1) 拡大表示 ----------
   var box, img, cap, list = [], idx = 0, closeBtn, lastFocus = null;
+  var main = document.getElementById('SITE_CONTAINER');
   function build() {
     box = document.createElement('div');
     box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', '写真の拡大表示');
     box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(255,255,255,.96);display:none;align-items:center;justify-content:center';
     img = document.createElement('img');
     img.style.cssText = 'max-width:calc(100vw - 160px);max-height:calc(100vh - 80px);object-fit:contain;box-shadow:0 2px 20px rgba(0,0,0,.15)';
@@ -34,27 +36,30 @@
     img.src = list[idx].src; img.alt = list[idx].alt || '';
     cap.textContent = list[idx].alt && !/\.(jpe?g|png)$/i.test(list[idx].alt) ? list[idx].alt : '';
   }
-  function openList(imgs, start) {
+  function openList(imgs, start, opener) {
     if (!box) build();
     list = imgs.map(function (el) { return { src: el.currentSrc || el.src, alt: el.alt }; });
     show(Math.max(0, start));
-    lastFocus = document.activeElement;
+    lastFocus = opener || document.activeElement;
     box.style.display = 'flex'; document.documentElement.style.overflow = 'hidden';
+    // 拡大表示の後ろは、読み上げソフトからも触れないようにする
+    if (main) main.setAttribute('aria-hidden', 'true');
     if (closeBtn) closeBtn.focus();
   }
-  function open(gallery, target) {
+  function open(gallery, target, opener) {
     var all = [].slice.call(gallery.querySelectorAll('img[data-hook="gallery-item-image-img"]'));
-    openList(all, all.indexOf(target));
+    openList(all, all.indexOf(target), opener);
   }
   function close() {
     box.style.display = 'none'; document.documentElement.style.overflow = '';
+    if (main) main.removeAttribute('aria-hidden');
     // 開く前に触っていた場所へ焦点を戻す
     if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }
     lastFocus = null;
   }
   document.addEventListener('keydown', function (e) {
     if (!box || box.style.display !== 'flex') return;
-    if (e.key === 'Escape') close();
+    if (e.key === 'Escape') { e.stopPropagation(); close(); }
     else if (e.key === 'ArrowLeft') show(idx - 1);
     else if (e.key === 'ArrowRight') show(idx + 1);
     else if (e.key === 'Tab') {
@@ -66,13 +71,28 @@
       e.preventDefault(); f[to].focus();
     }
   });
+  function openFromItem(item, opener) {
+    var target = item.querySelector('img[data-hook="gallery-item-image-img"]');
+    var gallery = item.closest('.pro-gallery') || document;
+    if (!target) return false;
+    open(gallery, target, opener || item.querySelector('[data-hook="item-action"]') || item);
+    return true;
+  }
   document.addEventListener('click', function (e) {
     var item = e.target.closest && e.target.closest('[data-hook="item-container"].clickable');
     if (!item) return;
-    var target = item.querySelector('img[data-hook="gallery-item-image-img"]');
-    var gallery = item.closest('.pro-gallery') || document;
-    if (!target) return;
-    e.preventDefault(); open(gallery, target);
+    if (openFromItem(item)) e.preventDefault();
+  });
+  // 写真の枠は本物では div（role="button"）のため、Enter とスペースでは押したことにならない。ここで補う
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    if (box && box.style.display === 'flex') return;
+    var t = e.target.closest && e.target.closest('[data-hook="item-action"], [data-testid="gallery-item-click-action-image-zoom"]');
+    if (!t) return;
+    var item = t.closest('[data-hook="item-container"].clickable');
+    if (item) { if (openFromItem(item, t)) e.preventDefault(); return; }
+    var slide = t.closest('[data-testid="slide-show-gallery"]');
+    if (slide && slide.__openZoom) { e.preventDefault(); slide.__openZoom(t); }
   });
 
   // ---------- 4) スライドショー: 約3.5秒ごとに自動で切り替え（本物の実測 3.43〜3.64秒）、クリックで拡大 ----------
@@ -86,9 +106,11 @@
       i = (i + 1) % ghosts.length;
       cur.setAttribute('src', ghosts[i].getAttribute('src'));
     }, 3500);
+    g.__openZoom = function (opener) { openList(ghosts, i, opener); };
     g.addEventListener('click', function (e) {
-      if (!e.target.closest('[data-testid="gallery-item-click-action-image-zoom"]')) return;
-      e.preventDefault(); openList(ghosts, i);
+      var z = e.target.closest('[data-testid="gallery-item-click-action-image-zoom"]');
+      if (!z) return;
+      e.preventDefault(); openList(ghosts, i, z);
     });
   });
 
@@ -244,14 +266,20 @@
       menu.setAttribute('data-hovered-item', i);
       var a = li.querySelector('a[aria-haspopup]'); if (a) a.setAttribute('aria-expanded', 'true');
       var b = li.querySelector('button'); if (b) b.classList.add('Ln3X5V');
+      openTrigger = a || b || li;
       openIdx = i;
     }
+    var openTrigger = null;
     function close(fromOpen) {
       clearTimeout(timer);
       if (openIdx === null) return;
       var li = openIdx === 'more' ? null : topItem(openIdx);
       if (li) { var a = li.querySelector('a[aria-haspopup]'); if (a) a.setAttribute('aria-expanded', 'false'); var b = li.querySelector('button'); if (b) b.classList.remove('Ln3X5V'); }
+      // 下層の項目に焦点があるまま消すと行き場を失うので、開いた元へ戻す
+      var inside = openTrigger && wrap.contains(document.activeElement);
       ul.innerHTML = ''; ul.removeAttribute('data-hover'); ul.removeAttribute('style');
+      if (inside) { try { openTrigger.focus(); } catch (e) {} }
+      openTrigger = null;
       wrap.classList.remove('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'false'); wrap.removeAttribute('data-drophposition'); wrap.removeAttribute('style');
       menu.removeAttribute('data-hovered-item');
       var mb = document.querySelector('#comp-kep43s1b__more__ [aria-haspopup]');
@@ -279,7 +307,10 @@
     });
     // 他のメニュー項目に移ったら閉じる
     [].forEach.call(menu.querySelectorAll('li[data-index]:not([data-dropdown])'), function (li) {
-      if (!DROP[li.getAttribute('data-index')] && !touchUA) li.addEventListener('mouseenter', function () { close(); });
+      if (!DROP[li.getAttribute('data-index')] && !touchUA) {
+        li.addEventListener('mouseenter', function () { close(); });
+        li.addEventListener('focusin', function () { if (openIdx !== 'more') close(); });
+      }
     });
     if (!touchUA) { wrap.addEventListener('mouseenter', function () { clearTimeout(timer); }); wrap.addEventListener('mouseleave', later); }
 
@@ -354,20 +385,29 @@
         var left = x + 'px';
         wrap.style.inset = '30px auto auto ' + left;
         if (moreBtn) moreBtn.setAttribute('aria-expanded', 'true');
+        openTrigger = moreBtn || moreLi;
         openIdx = 'more';
       };
       var moreBtn = moreLi.querySelector('[aria-haspopup]');
+      if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
       if (moreBtn) moreBtn.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
         e.preventDefault();
         if (openIdx === 'more') close(); else openMore();
       });
-      if (!touchUA) { moreLi.addEventListener('mouseenter', openMore); moreLi.addEventListener('mouseleave', later); }
+      // iPad のデスクトップ表示モードでは、指でふれた時に「マウスが乗った」合図が先に届く。
+      // 直後の押した合図で閉じてしまわないよう、乗って開いた時刻を覚えておく
+      var hoverOpenAt = 0;
+      if (!touchUA) {
+        moreLi.addEventListener('mouseenter', function () { openMore(); hoverOpenAt = Date.now(); });
+        moreLi.addEventListener('mouseleave', later);
+      }
       // タッチ端末では1回の指タップで click が続けて2回届くことがあるため、直後の重複は無視する
       var lastToggle = 0;
       moreLi.addEventListener('click', function (e) {
         e.preventDefault();
         var now = Date.now(); if (now - lastToggle < 400) return; lastToggle = now;
+        if (openIdx === 'more' && now - hoverOpenAt < 700) return;
         if (openIdx === 'more') close(); else openMore();
       });
     }
@@ -392,9 +432,13 @@
     var refit = function () { fit(); };
     fit();
     [100, 400, 1200, 2500].forEach(function (ms) { setTimeout(refit, ms); });
-    var hardRefit = function () { close(); pendingFit = false; fit(); };
+    var hardTimer = null;
+    var hardRefit = function () {
+      clearTimeout(hardTimer);
+      hardTimer = setTimeout(function () { close(); pendingFit = false; fit(); }, 120);
+    };
     window.addEventListener('resize', hardRefit);
-    window.addEventListener('orientationchange', function () { setTimeout(hardRefit, 300); });
+    window.addEventListener('orientationchange', hardRefit);
     window.addEventListener('load', refit);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
 
