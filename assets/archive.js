@@ -59,7 +59,7 @@
   }
   document.addEventListener('keydown', function (e) {
     if (!box || box.style.display !== 'flex') return;
-    if (e.key === 'Escape') { e.stopPropagation(); close(); }
+    if (e.key === 'Escape') { e.stopImmediatePropagation(); close(); }
     else if (e.key === 'ArrowLeft') show(idx - 1);
     else if (e.key === 'ArrowRight') show(idx + 1);
     else if (e.key === 'Tab') {
@@ -309,10 +309,34 @@
     [].forEach.call(menu.querySelectorAll('li[data-index]:not([data-dropdown])'), function (li) {
       if (!DROP[li.getAttribute('data-index')] && !touchUA) {
         li.addEventListener('mouseenter', function () { close(); });
-        li.addEventListener('focusin', function () { if (openIdx !== 'more') close(); });
+        li.addEventListener('focusin', function () { close(); });
       }
     });
     if (!touchUA) { wrap.addEventListener('mouseenter', function () { clearTimeout(timer); }); wrap.addEventListener('mouseleave', later); }
+
+    // キーボード: 下層の枠は DOM の末尾にあるため、そのままでは Tab で親項目から下層へ入れない。
+    // 親項目で Tab → 下層の先頭、下層の先頭で Shift+Tab → 親項目、下層の末尾で Tab → 次の上位項目 とつなぐ
+    // 上位項目ごとに、利用者が Tab で止まる要素（項目のリンク、または「その他」の枠）を1つずつ集める
+    function focusables() {
+      return [].map.call(menu.querySelectorAll('li[data-index]:not([data-dropdown])'), function (li) {
+        if (li.style.display === 'none' || li.getAttribute('aria-hidden') === 'true') return null;
+        return li.querySelector('a[href], [tabindex="0"]');
+      }).filter(Boolean);
+    }
+    menu.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab' || openIdx === null) return;
+      var links = [].slice.call(ul.querySelectorAll('a[href]'));
+      if (!links.length) return;
+      var t = e.target;
+      if (!e.shiftKey && openTrigger && (t === openTrigger || openTrigger.contains(t))) { e.preventDefault(); links[0].focus(); return; }
+      if (e.shiftKey && t === links[0]) { e.preventDefault(); openTrigger.focus(); return; }
+      if (!e.shiftKey && t === links[links.length - 1]) {
+        var f = focusables(), at = f.indexOf(openTrigger);
+        if (at >= 0 && at < f.length - 1) { e.preventDefault(); f[at + 1].focus(); }
+      }
+    });
+    // 焦点がメニューの外へ出たら、開いている下層を閉じる
+    document.addEventListener('focusin', function (e) { if (openIdx !== null && !menu.contains(e.target)) close(); });
 
     // 画面が狭くてメニューが一列に収まらない時、本物と同じく後ろの項目を「その他」へたたむ
     // （iPad のデスクトップ表示モードなど、表示幅が980pxより狭くなる端末で起きる）
