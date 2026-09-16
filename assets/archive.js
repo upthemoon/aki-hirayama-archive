@@ -5,7 +5,7 @@
   'use strict';
 
   // ---------- 1) 拡大表示 ----------
-  var box, img, cap, list = [], idx = 0;
+  var box, img, cap, list = [], idx = 0, closeBtn, lastFocus = null;
   function build() {
     box = document.createElement('div');
     box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
@@ -21,7 +21,7 @@
       b.addEventListener('click', function (e) { e.stopPropagation(); fn(); });
       box.appendChild(b); return b;
     }
-    btn('閉じる', 'top:6px;right:10px', close);
+    closeBtn = btn('閉じる', 'top:6px;right:10px', close);
     btn('前へ', 'left:10px;top:50%;transform:translateY(-50%)', function () { show(idx - 1); });
     btn('次へ', 'right:10px;top:50%;transform:translateY(-50%)', function () { show(idx + 1); });
     box.appendChild(img); box.appendChild(cap);
@@ -38,18 +38,33 @@
     if (!box) build();
     list = imgs.map(function (el) { return { src: el.currentSrc || el.src, alt: el.alt }; });
     show(Math.max(0, start));
+    lastFocus = document.activeElement;
     box.style.display = 'flex'; document.documentElement.style.overflow = 'hidden';
+    if (closeBtn) closeBtn.focus();
   }
   function open(gallery, target) {
     var all = [].slice.call(gallery.querySelectorAll('img[data-hook="gallery-item-image-img"]'));
     openList(all, all.indexOf(target));
   }
-  function close() { box.style.display = 'none'; document.documentElement.style.overflow = ''; }
+  function close() {
+    box.style.display = 'none'; document.documentElement.style.overflow = '';
+    // 開く前に触っていた場所へ焦点を戻す
+    if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }
+    lastFocus = null;
+  }
   document.addEventListener('keydown', function (e) {
     if (!box || box.style.display !== 'flex') return;
     if (e.key === 'Escape') close();
     else if (e.key === 'ArrowLeft') show(idx - 1);
     else if (e.key === 'ArrowRight') show(idx + 1);
+    else if (e.key === 'Tab') {
+      // 拡大表示を開いている間は、Tab が後ろのページ本体へ抜けないようにする
+      var f = [].slice.call(box.querySelectorAll('button'));
+      if (!f.length) return;
+      var at = f.indexOf(document.activeElement);
+      var to = e.shiftKey ? (at <= 0 ? f.length - 1 : at - 1) : (at === f.length - 1 ? 0 : at + 1);
+      e.preventDefault(); f[to].focus();
+    }
   });
   document.addEventListener('click', function (e) {
     var item = e.target.closest && e.target.closest('[data-hook="item-container"].clickable');
@@ -214,7 +229,7 @@
     function open(i) {
       clearTimeout(timer);
       if (openIdx === i) return;
-      close();
+      close(true);
       var d = DROP[i], li = topItem(i); if (!d || !li) return;
       ul.innerHTML = d.html; ul.setAttribute('data-hover', i);
       // 今いるページの項目は本物と同じく「選択中」の状態にする
@@ -231,7 +246,7 @@
       var b = li.querySelector('button'); if (b) b.classList.add('Ln3X5V');
       openIdx = i;
     }
-    function close() {
+    function close(fromOpen) {
       clearTimeout(timer);
       if (openIdx === null) return;
       var li = openIdx === 'more' ? null : topItem(openIdx);
@@ -239,13 +254,20 @@
       ul.innerHTML = ''; ul.removeAttribute('data-hover'); ul.removeAttribute('style');
       wrap.classList.remove('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'false'); wrap.removeAttribute('data-drophposition'); wrap.removeAttribute('style');
       menu.removeAttribute('data-hovered-item');
+      var mb = document.querySelector('#comp-kep43s1b__more__ [aria-haspopup]');
+      if (mb) mb.setAttribute('aria-expanded', 'false');
       openIdx = null;
+      // 開いている間は見送った測り直しを、閉じてから行う
+      if (pendingFit && !fromOpen) { pendingFit = false; fit(); }
     }
     function later() { clearTimeout(timer); timer = setTimeout(close, 150); }
     Object.keys(DROP).forEach(function (i) {
       var li = topItem(i); if (!li) return;
       // スマホ・タブレットではタップの直前に疑似的な「マウスが乗った」合図が来るため、乗せて開く動きはPCだけにする
-      if (!touchUA) { li.addEventListener('mouseenter', function () { open(i); }); li.addEventListener('mouseleave', later); }
+      if (!touchUA) {
+        li.addEventListener('mouseenter', function () { open(i); }); li.addEventListener('mouseleave', later);
+        li.addEventListener('focusin', function () { open(i); });
+      }
       var a = li.querySelector('a[aria-haspopup]');
       var lastTap = 0;
       if (a && touchUA) a.addEventListener('click', function (e) {
@@ -257,7 +279,7 @@
     });
     // 他のメニュー項目に移ったら閉じる
     [].forEach.call(menu.querySelectorAll('li[data-index]:not([data-dropdown])'), function (li) {
-      if (!DROP[li.getAttribute('data-index')] && !touchUA) li.addEventListener('mouseenter', close);
+      if (!DROP[li.getAttribute('data-index')] && !touchUA) li.addEventListener('mouseenter', function () { close(); });
     });
     if (!touchUA) { wrap.addEventListener('mouseenter', function () { clearTimeout(timer); }); wrap.addEventListener('mouseleave', later); }
 
@@ -285,9 +307,11 @@
       var last = hasMore ? moreLi : visible[visible.length - 1];
       return last ? last.getBoundingClientRect().right : 0;
     }
+    var pendingFit = false;
     function fit() {
       if (!moreLi || !nav) return;
-      if (openIdx !== null) close();
+      // メニューを開いている間は測り直さない（利用者の操作を取り消さないため）
+      if (openIdx !== null) { pendingFit = true; return; }
       tops.forEach(function (li) { li.style.display = ''; li.style.width = ''; });
       showMore(false);
       var limit = nav.getBoundingClientRect().right + 2;
@@ -318,7 +342,7 @@
     if (moreLi) {
       var openMore = function () {
         if (!MORE_ITEMS) return;
-        close();
+        close(true);
         var r = moreLi.getBoundingClientRect(), nr = nav.getBoundingClientRect();
         ul.innerHTML = moreHtml(); ul.setAttribute('data-hover', 'more'); ul.style.right = 'auto';
         // いったん仮置きして幅を測り、画面からはみ出さない位置に収める
@@ -329,8 +353,15 @@
         var x = Math.round(Math.min(Math.max(0, r.left - nr.left), Math.max(0, nr.width - w)));
         var left = x + 'px';
         wrap.style.inset = '30px auto auto ' + left;
+        if (moreBtn) moreBtn.setAttribute('aria-expanded', 'true');
         openIdx = 'more';
       };
+      var moreBtn = moreLi.querySelector('[aria-haspopup]');
+      if (moreBtn) moreBtn.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+        e.preventDefault();
+        if (openIdx === 'more') close(); else openMore();
+      });
       if (!touchUA) { moreLi.addEventListener('mouseenter', openMore); moreLi.addEventListener('mouseleave', later); }
       // タッチ端末では1回の指タップで click が続けて2回届くことがあるため、直後の重複は無視する
       var lastToggle = 0;
@@ -361,8 +392,9 @@
     var refit = function () { fit(); };
     fit();
     [100, 400, 1200, 2500].forEach(function (ms) { setTimeout(refit, ms); });
-    window.addEventListener('resize', refit);
-    window.addEventListener('orientationchange', function () { setTimeout(refit, 300); });
+    var hardRefit = function () { close(); pendingFit = false; fit(); };
+    window.addEventListener('resize', hardRefit);
+    window.addEventListener('orientationchange', function () { setTimeout(hardRefit, 300); });
     window.addEventListener('load', refit);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
 
