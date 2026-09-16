@@ -247,7 +247,11 @@
       // スマホ・タブレットではタップの直前に疑似的な「マウスが乗った」合図が来るため、乗せて開く動きはPCだけにする
       if (!touchUA) { li.addEventListener('mouseenter', function () { open(i); }); li.addEventListener('mouseleave', later); }
       var a = li.querySelector('a[aria-haspopup]');
-      if (a && touchUA) a.addEventListener('click', function (e) { if (openIdx !== i) { e.preventDefault(); open(i); } });
+      var lastTap = 0;
+      if (a && touchUA) a.addEventListener('click', function (e) {
+        var now = Date.now();
+        if (openIdx !== i || now - lastTap < 400) { e.preventDefault(); lastTap = now; open(i); }
+      });
       var b = li.querySelector('button');
       if (b) b.addEventListener('click', function (e) { e.preventDefault(); if (openIdx === i) close(); else open(i); });
     });
@@ -263,41 +267,41 @@
     var moreLi = more ? more.closest('li') : menu.querySelector('#comp-kep43s1b__more__') || menu.querySelector('li:last-child');
     var nav = document.getElementById('comp-kep43s1bnavContainer');
     var tops = [].slice.call(menu.querySelectorAll('li[data-index]:not([data-dropdown])'));
-    var natural = null;
+    // 幅が足りているかは「文字が枠に収まっているか」で判断する（幅の計算に頼らない）。
+    // 収まらない端末（iPad のデスクトップ表示モードなど）では、後ろの項目から「その他」へ移す。
+    // 代替書体では一部の項目名が Wix の決めた枠より広くなり、隣に重なる（iPad 実機で確認）。
+    // その場合は項目の枠を文字なりの幅にしてから、収まらない分だけ「その他」へ移す。
+    function showMore(on) {
+      if (on) {
+        moreLi.style.visibility = 'visible'; moreLi.setAttribute('aria-hidden', 'false');
+        moreLi.style.height = ''; moreLi.style.overflow = 'visible'; moreLi.style.position = 'relative';
+      } else {
+        moreLi.style.visibility = 'hidden'; moreLi.setAttribute('aria-hidden', 'true');
+        moreLi.style.height = '0px'; moreLi.style.overflow = 'hidden'; moreLi.style.position = 'absolute';
+      }
+    }
+    // 行の右端がメニュー枠の右端をはみ出していたら、後ろの項目を「その他」へ移す
+    function rowRight(visible, hasMore) {
+      var last = hasMore ? moreLi : visible[visible.length - 1];
+      return last ? last.getBoundingClientRect().right : 0;
+    }
     function fit() {
       if (!moreLi || !nav) return;
       if (openIdx !== null) close();
-      // 各項目の「本来の幅」を一度だけ測る
-      if (!natural) {
-        // 幅が足りない時、項目の枠は縮んで文字だけがはみ出す。だから「文字が必要とする幅」で測る
-        natural = tops.map(function (li) {
-          var p = li.querySelector('p') || li;
-          var pad = li.getBoundingClientRect().width - p.getBoundingClientRect().width;
-          return Math.ceil(Math.max(p.scrollWidth, p.getBoundingClientRect().width) + Math.max(0, pad));
-        });
-        natural.moreW = Math.ceil(moreLi.getBoundingClientRect().width) || 62;
-        if (natural.moreW < 40) natural.moreW = 62;
+      tops.forEach(function (li) { li.style.display = ''; li.style.width = ''; });
+      showMore(false);
+      var limit = nav.getBoundingClientRect().right + 2;
+      var visible = tops.slice(), hidden = [];
+      for (var guard = 0; guard < tops.length && visible.length > 1; guard++) {
+        if (rowRight(visible, hidden.length > 0) <= limit) break;
+        var li = visible.pop(); li.style.display = 'none'; hidden.unshift(li); showMore(true);
       }
-      var avail = nav.getBoundingClientRect().width;
-      var hidden = [];
-      var total = natural.reduce(function (a, b) { return a + b; }, 0);
-      var i = tops.length - 1;
-      while (total > avail && i > 0) {
-        // 「その他」の分の幅も要る
-        if (!hidden.length) total += natural.moreW;
-        hidden.unshift(tops[i]); total -= natural[i]; i--;
-      }
-      tops.forEach(function (li) { li.style.display = hidden.indexOf(li) >= 0 ? 'none' : ''; });
-      if (hidden.length) {
-        // 本物は「その他」を高さ0・位置絶対で隠している。出す時はその指定を外す
-        moreLi.style.visibility = 'visible'; moreLi.setAttribute('aria-hidden', 'false');
-        moreLi.style.display = ''; moreLi.style.height = ''; moreLi.style.overflow = 'visible'; moreLi.style.position = 'relative';
-        MORE_ITEMS = hidden.map(function (li) { var a = li.querySelector('a'); return { href: a ? a.getAttribute('href') : '#', text: (li.textContent || '').trim(), idx: li.getAttribute('data-index') }; });
-      } else {
-        moreLi.style.visibility = 'hidden'; moreLi.setAttribute('aria-hidden', 'true');
-        moreLi.style.display = ''; moreLi.style.height = '0px'; moreLi.style.overflow = 'hidden'; moreLi.style.position = 'absolute';
-        MORE_ITEMS = null;
-      }
+      window.__fit = { limit: Math.round(limit), hidden: hidden.length, endRight: Math.round(rowRight(visible, hidden.length > 0)) };
+      MORE_ITEMS = hidden.length ? hidden.map(function (li) {
+        var a = li.querySelector('a');
+        return { href: a ? a.getAttribute('href') : '#', text: (li.textContent || '').trim(), idx: li.getAttribute('data-index') };
+      }) : null;
+      if (!hidden.length) showMore(false);
     }
     var MORE_ITEMS = null;
     // 「その他」を開いた時の中身を、下層メニューと同じ作りで組み立てる
@@ -316,18 +320,51 @@
         if (!MORE_ITEMS) return;
         close();
         var r = moreLi.getBoundingClientRect(), nr = nav.getBoundingClientRect();
-        var left = Math.round(r.left - nr.left) + 'px';
-        ul.innerHTML = moreHtml(); ul.setAttribute('data-hover', 'more'); ul.style.left = left; ul.style.right = 'auto';
+        ul.innerHTML = moreHtml(); ul.setAttribute('data-hover', 'more'); ul.style.right = 'auto';
+        // いったん仮置きして幅を測り、画面からはみ出さない位置に収める
+        ul.style.left = '0px';
         wrap.classList.add('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'true'); wrap.setAttribute('data-drophposition', 'center');
+        wrap.style.inset = '30px auto auto 0px';
+        var w = ul.getBoundingClientRect().width || 200;
+        var x = Math.round(Math.min(Math.max(0, r.left - nr.left), Math.max(0, nr.width - w)));
+        var left = x + 'px';
         wrap.style.inset = '30px auto auto ' + left;
         openIdx = 'more';
       };
       if (!touchUA) { moreLi.addEventListener('mouseenter', openMore); moreLi.addEventListener('mouseleave', later); }
-      moreLi.addEventListener('click', function (e) { e.preventDefault(); if (openIdx === 'more') close(); else openMore(); });
+      // タッチ端末では1回の指タップで click が続けて2回届くことがあるため、直後の重複は無視する
+      var lastToggle = 0;
+      moreLi.addEventListener('click', function (e) {
+        e.preventDefault();
+        var now = Date.now(); if (now - lastToggle < 400) return; lastToggle = now;
+        if (openIdx === 'more') close(); else openMore();
+      });
     }
+    // 調査用: ?diag=1 を付けて開くと、メニューの実測値を画面上部に表示する（本番の表示には影響しない）
+    if (/[?&]diag=1/.test(location.search)) {
+      setTimeout(function () {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#111;color:#0f0;font:11px/1.35 monospace;padding:6px;white-space:pre-wrap';
+        var navR = nav.getBoundingClientRect();
+        var lines = ['innerW=' + innerWidth + ' visualScale=' + (visualViewport ? visualViewport.scale.toFixed(3) : '-') + ' navW=' + Math.round(navR.width) + ' navRight=' + Math.round(navR.right),
+                     'fit=' + JSON.stringify(window.__fit || null)];
+        tops.concat([moreLi]).forEach(function (li) {
+          var q = li.querySelector('p') || li, r = li.getBoundingClientRect();
+          lines.push((li.textContent || '').trim().slice(0, 6) + ' liW=' + Math.round(r.width) + ' right=' + Math.round(r.right) + ' pScroll=' + q.scrollWidth + ' pClient=' + q.clientWidth + ' disp=' + (li.style.display || '-') + ' vis=' + getComputedStyle(li).visibility);
+        });
+        d.textContent = lines.join('\n');
+        document.body.appendChild(d);
+      }, 2500);
+    }
+
+    // 書体や写真の読み込みで幅が変わるため、表示が落ち着くまで何度か測り直す
+    var refit = function () { fit(); };
     fit();
-    window.addEventListener('resize', function () { natural = null; fit(); });
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { natural = null; fit(); });
+    [100, 400, 1200, 2500].forEach(function (ms) { setTimeout(refit, ms); });
+    window.addEventListener('resize', refit);
+    window.addEventListener('orientationchange', function () { setTimeout(refit, 300); });
+    window.addEventListener('load', refit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
 
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
   })();
