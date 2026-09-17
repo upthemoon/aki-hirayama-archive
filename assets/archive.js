@@ -246,7 +246,11 @@
     var ul = document.getElementById('comp-kep43s1bmoreContainer');
     if (!menu || !wrap || !ul) return;
     var touchUA = /iPhone|iPod|iPad|Android|Silk|Kindle|Mobile/i.test(navigator.userAgent);
-    var openIdx = null, timer = null;
+    var openIdx = null, timer = null, openedAt = 0, lastTouchAt = 0;
+    // iPad のデスクトップ表示モードは UA が Mac と同じになるため、UA ではなく実際の入力で指の操作かを見分ける
+    var markTouch = function (e) { if (!e.pointerType || e.pointerType === 'touch' || e.pointerType === 'pen') lastTouchAt = Date.now(); };
+    document.addEventListener('pointerdown', function (e) { if (e.pointerType === 'touch' || e.pointerType === 'pen') markTouch(e); }, true);
+    document.addEventListener('touchstart', markTouch, { capture: true, passive: true });
     function topItem(i) { return menu.querySelector('li[data-index="' + i + '"]:not([data-dropdown])'); }
     function open(i) {
       clearTimeout(timer);
@@ -264,6 +268,7 @@
       wrap.classList.add('mmODQd'); wrap.setAttribute('data-dropdown-shown', 'true'); wrap.setAttribute('data-drophposition', 'center');
       wrap.style.inset = '30px auto auto ' + d.left;
       menu.setAttribute('data-hovered-item', i);
+      openedAt = Date.now();
       var a = li.querySelector('a[aria-haspopup]'); if (a) a.setAttribute('aria-expanded', 'true');
       var b = li.querySelector('button'); if (b) b.classList.add('Ln3X5V');
       openTrigger = a || b || li;
@@ -297,10 +302,13 @@
         li.addEventListener('focusin', function () { open(i); });
       }
       var a = li.querySelector('a[aria-haspopup]');
-      var lastTap = 0;
-      if (a && touchUA) a.addEventListener('click', function (e) {
+      if (a) a.addEventListener('click', function (e) {
         var now = Date.now();
-        if (openIdx !== i || now - lastTap < 400) { e.preventDefault(); lastTap = now; open(i); }
+        var byTouch = touchUA || now - lastTouchAt < 1000;
+        if (!byTouch) return;
+        // 閉じていた、または同じタップで「マウスが乗った」合図により今開いたばかり、なら移動せずに下層を見せる
+        // （1回のタップで click が2回届く端末もあるため、開いた直後の click もここで止める）
+        if (openIdx !== i || now - openedAt < 700) { e.preventDefault(); open(i); }
       });
       var b = li.querySelector('button');
       if (b) b.addEventListener('click', function (e) { e.preventDefault(); if (openIdx === i) close(); else open(i); });
